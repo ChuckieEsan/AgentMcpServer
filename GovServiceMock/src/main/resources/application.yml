@@ -1,0 +1,28 @@
+# 应用名称
+spring:
+  application:
+    name: gov-service-mock
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false
+
+# Dubbo配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  registry:
+    address: nacos://localhost:8848
+  protocol:
+    name: dubbo
+    port: 20880
+  scan:
+    base-packages: com.gov.mock.service.impl
+  provider:
+    # 启用服务导出，确保服务被发布
+    filter: -validation
+
+# 服务器配置
+server:
+  port: 8082
