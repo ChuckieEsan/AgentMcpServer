@@ -1,18 +1,18 @@
 package com.zju.agentmcpserver.config;
 
 import com.zju.agentmcpserver.tool.registry.ToolRegistry;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ToolRegistrationInitializer implements CommandLineRunner {
 
-    @Autowired
-    private ToolProperties toolProperties;
+    private final ToolProperties toolProperties;
 
-    @Autowired
-    private ToolRegistry toolRegistry;
+    private final ToolRegistry toolRegistry;
 
     @Override
     public void run(String... args) throws Exception {

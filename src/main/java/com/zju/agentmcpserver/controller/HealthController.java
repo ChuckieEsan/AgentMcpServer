@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/health")
+@RequiredArgsConstructor
 public class HealthController {
-    @Autowired
-    private ToolRegistry toolRegistry;
+    private final ToolRegistry toolRegistry;
 
     @GetMapping
     public String healthCheck() {

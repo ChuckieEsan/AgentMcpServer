@@ -2,19 +2,19 @@ package com.zju.agentmcpserver.config;
 
 import com.alibaba.nacos.api.config.annotation.NacosConfigListener;
 import com.zju.agentmcpserver.tool.registry.ToolRegistry;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
 
 @Component
 @RefreshScope
+@RequiredArgsConstructor
 public class ToolConfigListener {
 
-    @Autowired
-    private ToolProperties toolProperties;
+    private final ToolProperties toolProperties;
 
-    @Autowired
-    private ToolRegistry toolRegistry;
+    private final ToolRegistry toolRegistry;
 
     @NacosConfigListener(dataId = "mcp-tools.yaml", groupId = "DEFAULT_GROUP")
     public void onConfigChange(String newConfig) {
