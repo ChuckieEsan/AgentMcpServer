@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: gov-mcp-gateway
+  cloud:
+    nacos:
+      config:
+        server-addr: localhost:8848
+        file-extension: yaml
+        import-check:
+          enabled: true
+      discovery:
+        server-addr: localhost:8848
+        namespace: public
+  config:
+    import:
+      - optional:nacos:gov-service-mock-mcp.yml?group=DEFAULT_GROUP&refreshEnabled=true
+
+# MCP Server 配置
+spring.ai:
+  mcp:
+    server:
+      webmvc:
+        enabled: true
+
+# Dubbo 配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+    qos-enable: false
+  registry:
+    address: nacos://${spring.cloud.nacos.discovery.server-addr}
+    group: gov-political
+  protocol:
+    name: dubbo
+
+server:
+  port: 8083
+
+logging:
+  level:
+    com.gov.gateway: DEBUG
+    org.apache.dubbo: INFO

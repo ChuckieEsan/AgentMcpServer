@@ -12,6 +12,7 @@ spring:
 dubbo:
   application:
     name: ${spring.application.name}
+    qos-enable: false
   registry:
     address: nacos://localhost:8848
   protocol:

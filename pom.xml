@@ -11,6 +11,7 @@
     <groupId>com.zju</groupId>
     <artifactId>AgentMcpServer</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>AgentMcpServer</name>
     <description>AgentMcpServer</description>
     <url/>
@@ -20,6 +21,10 @@
     <developers>
         <developer/>
     </developers>
+    <modules>
+        <module>GovServiceMock</module>
+        <module>GovMcpGateway</module>
+    </modules>
     <scm>
         <connection/>
         <developerConnection/>
@@ -123,17 +128,6 @@
         </dependency>
 
         <!-- MCP Nacos 注册支持 -->
-
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba.cloud.ai</groupId>-->
-<!--            <artifactId>spring-ai-alibaba-starter-nacos-mcp-server</artifactId>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba.cloud.ai</groupId>-->
-<!--            <artifactId>spring-ai-alibaba-starter-mcp-registry</artifactId>-->
-<!--            <version>1.0.0.4</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
@@ -168,7 +162,6 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
-
 
     </dependencies>
 
