@@ -23,7 +23,9 @@ public class DubboConfig {
     public RegistryConfig registryConfig() {
         RegistryConfig config = new RegistryConfig();
         config.setAddress(dubboProperties.getRegistry().getAddress());
-        config.setGroup(dubboProperties.getRegistry().getGroup());
+        // 注意：RegistryConfig 的 group 是 Nacos 服务分组，不是 Dubbo 接口分组
+        // 如果服务在 DEFAULT_GROUP，这里应该保持默认或显式设置为 DEFAULT_GROUP
+        // config.setGroup(dubboProperties.getRegistry().getGroup());
         return config;
     }
 

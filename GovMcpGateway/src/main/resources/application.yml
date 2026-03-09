@@ -10,26 +10,29 @@ spring:
           enabled: true
       discovery:
         server-addr: localhost:8848
-        namespace: public
   config:
     import:
       - optional:nacos:gov-service-mock-mcp.yml?group=DEFAULT_GROUP&refreshEnabled=true
 
 # MCP Server 配置
-spring.ai:
-  mcp:
-    server:
-      webmvc:
+  ai:
+    mcp:
+      server:
         enabled: true
 
 # Dubbo 配置
+# 注意：
+# - Nacos 服务分组（Spring Cloud）和 Dubbo 接口分组是不同的概念
+# - RegistryConfig 的 group 是 Nacos 服务分组（默认 DEFAULT_GROUP）
+# - Dubbo 接口的 group 在 @DubboService(group="gov-political") 中定义
+# - 消费者通过 ReferenceConfig.setGroup("gov-political") 指定接口分组
 dubbo:
   application:
     name: ${spring.application.name}
     qos-enable: false
   registry:
     address: nacos://${spring.cloud.nacos.discovery.server-addr}
-    group: gov-political
+    # 不设置 group，使用默认的 DEFAULT_GROUP
   protocol:
     name: dubbo
 

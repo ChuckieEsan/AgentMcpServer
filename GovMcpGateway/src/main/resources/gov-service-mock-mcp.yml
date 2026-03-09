@@ -14,24 +14,31 @@ agent:
       inputSchema: '{
         "type": "object",
         "properties": {
-          "userId": {"type": "string", "description": "提交人ID"},
-          "userPhone": {"type": "string", "description": "联系方式"},
-          "title": {"type": "string", "description": "工单标题"},
-          "content": {"type": "string", "description": "详细描述"},
-          "department": {"type": "string", "description": "责任部门"},
-          "elements": {
+          "orderData": {
             "type": "object",
-            "description": "五大核心要素",
+            "description": "工单详细数据",
             "properties": {
-              "time": {"type": "string", "description": "时间"},
-              "location": {"type": "string", "description": "地点"},
-              "event": {"type": "string", "description": "核心事件"},
-              "goal": {"type": "string", "description": "诉求目标"},
-              "subjects": {"type": "array", "description": "涉及主体", "items": {"type": "string"}}
-            }
+              "userId": {"type": "string", "description": "提交人ID"},
+              "userPhone": {"type": "string", "description": "联系方式"},
+              "title": {"type": "string", "description": "工单标题"},
+              "content": {"type": "string", "description": "详细描述"},
+              "department": {"type": "string", "description": "责任部门"},
+              "elements": {
+                "type": "object",
+                "description": "五大核心要素",
+                "properties": {
+                  "time": {"type": "string", "description": "时间"},
+                  "location": {"type": "string", "description": "地点"},
+                  "event": {"type": "string", "description": "核心事件"},
+                  "goal": {"type": "string", "description": "诉求目标"},
+                  "subjects": {"type": "array", "description": "涉及主体", "items": {"type": "string"}}
+                }
+              }
+            },
+            "required":["userId", "userPhone", "title", "content"]
           }
         },
-        "required": ["userId", "userPhone", "title", "content"]
+        "required": ["orderData"]
       }'
       metadata:
         interface: "com.gov.mock.service.WorkOrderService"
@@ -40,6 +47,8 @@ agent:
         version: "1.0.0"
         paramTypes:
           - "java.util.Map"
+        paramNames:
+          - "orderData"
 
     # ==========================================
     # 场景 2: 查询工单详情
@@ -61,6 +70,8 @@ agent:
         version: "1.0.0"
         paramTypes:
           - "java.lang.String"
+        paramNames:
+          - "orderId"
 
     # ==========================================
     # 场景 3: 工单流转处理
@@ -87,7 +98,7 @@ agent:
             }
           }
         },
-        "required": ["orderId", "action", "payload"]
+        "required":["orderId", "action", "payload"]
       }'
       metadata:
         interface: "com.gov.mock.service.WorkOrderService"
@@ -98,6 +109,10 @@ agent:
           - "java.lang.String"
           - "com.gov.mock.enums.WorkOrderAction"
           - "java.util.Map"
+        paramNames:
+          - "orderId"
+          - "action"
+          - "payload"
 
     # ==========================================
     # 场景 4: 提交用户评价
@@ -131,3 +146,6 @@ agent:
         paramTypes:
           - "java.lang.String"
           - "java.util.Map"
+        paramNames:
+          - "orderId"
+          - "feedbackData"

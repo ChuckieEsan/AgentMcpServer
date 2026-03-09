@@ -13,6 +13,8 @@ import org.apache.dubbo.rpc.service.GenericService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,38 +55,37 @@ public class DubboGenericStrategy implements ToolStrategy {
         String methodName = (String) meta.get("method");
         String group = (String) meta.get("group");
         String version = (String) meta.get("version");
-        List<String> paramTypes = (List<String>) meta.get("paramTypes");
 
-        if (interfaceName == null || methodName == null) {
-            throw new ToolExecutionException(
-                    "Dubbo metadata must contain 'interface' and 'method'",
-                    toolDef.getName());
-        }
+        List<String> paramTypes = extractStringList(meta.get("paramTypes"));
+        List<String> paramNames = extractStringList(meta.get("paramNames")); // 获取参数名列表
 
-        // 1. 获取或创建 GenericService 引用
+        // 1. 获取 GenericService
         GenericService genericService = getGenericService(interfaceName, group, version);
 
-        // 2. 准备参数值 (需保证顺序与 paramTypes 一致)
-        Object[] paramValues = args.values().toArray();
+        // 2. 安全地准备参数值数组 (严格保证顺序)
+        Object[] paramValues;
+        if (paramNames != null && !paramNames.isEmpty()) {
+            paramValues = new Object[paramNames.size()];
+            for (int i = 0; i < paramNames.size(); i++) {
+                // 根据配置好的参数名，按顺序从 Agent 传来的 Map 中取值
+                paramValues[i] = args.get(paramNames.get(i));
+            }
+        } else {
+            // 如果只有单参数或者无参数的兜底 (不推荐依赖这个)
+            paramValues = args.values().toArray();
+        }
 
         try {
             // 3. 执行泛化调用
             return genericService.$invoke(
                     methodName,
-                    paramTypes != null ? paramTypes.toArray(new String[0]) : new String[0],
+                    paramTypes.toArray(new String[0]),
                     paramValues
             );
+
         } catch (GenericException e) {
-            log.error("Dubbo generic invoke failed for tool: {}", toolDef.getName(), e);
-            throw new ToolExecutionException(
-                    "Remote service error: " + e.getExceptionMessage(),
-                    toolDef.getName());
-        } catch (Exception e) {
-            log.error("Dubbo generic invoke failed for tool: {}", toolDef.getName(), e);
-            throw new ToolExecutionException(
-                    "Dubbo invoke failed: " + e.getMessage(),
-                    e,
-                    toolDef.getName());
+            log.error("Dubbo generic invoke failed", e);
+            throw new RuntimeException("Remote service error: " + e.getExceptionMessage());
         }
     }
 
@@ -119,6 +120,34 @@ public class DubboGenericStrategy implements ToolStrategy {
 
     private static boolean hasText(CharSequence str) {
         return str != null && !str.toString().trim().isEmpty();
+    }
+
+    /**
+     * 从 Object 中提取字符串列表，处理 YAML 绑定可能产生的 LinkedHashMap 情况
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> extractStringList(Object obj) {
+        if (obj == null) {
+            return new ArrayList<>();
+        }
+        if (obj instanceof List) {
+            return (List<String>) obj;
+        }
+        if (obj instanceof Map) {
+            // 处理被错误解析为 Map 的情况（key 为索引字符串）
+            Map<?, ?> map = (Map<?, ?>) obj;
+            List<String> result = new ArrayList<>();
+            for (int i = 0; i < map.size(); i++) {
+                String key = String.valueOf(i);
+                if (map.containsKey(key)) {
+                    result.add((String) map.get(key));
+                } else if (map.containsKey(i)) {
+                    result.add((String) map.get(i));
+                }
+            }
+            return result;
+        }
+        return new ArrayList<>();
     }
 
     private static class StringUtils {
