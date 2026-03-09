@@ -49,8 +49,8 @@ public class WorkOrderServiceClient {
             Response createResponse = workOrderService.createWorkOrder(orderData);
             System.out.println("创建工单响应: " + createResponse);
 
-            if (createResponse.success()) {
-                String orderId = (String) ((Map<String, Object>) createResponse.data()).get("orderId");
+            if (createResponse.getSuccess()) {
+                String orderId = (String) ((Map<String, Object>) createResponse.getData()).get("orderId");
                 System.out.println("创建的工单ID: " + orderId);
 
                 // 测试查询工单

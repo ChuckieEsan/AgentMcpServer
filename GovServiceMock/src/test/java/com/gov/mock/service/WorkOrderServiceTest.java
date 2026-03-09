@@ -41,11 +41,11 @@ class WorkOrderServiceTest {
         Response createResponse = workOrderService.createWorkOrder(orderData);
         System.out.println("创建工单响应: " + createResponse);
 
-        assertTrue(createResponse.success(), "工单创建应该成功");
-        assertNotNull(createResponse.data(), "响应数据不应为空");
+        assertTrue(createResponse.getSuccess(), "工单创建应该成功");
+        assertNotNull(createResponse.getData(), "响应数据不应为空");
 
         // 获取订单ID
-        String orderId = (String) ((Map<String, Object>) createResponse.data()).get("orderId");
+        String orderId = (String) ((Map<String, Object>) createResponse.getData()).get("orderId");
         assertNotNull(orderId, "订单ID不应为空");
         System.out.println("创建的工单ID: " + orderId);
 
@@ -53,11 +53,11 @@ class WorkOrderServiceTest {
         Response queryResponse = workOrderService.queryWorkOrder(orderId);
         System.out.println("查询工单响应: " + queryResponse);
 
-        assertTrue(queryResponse.success(), "工单查询应该成功");
-        assertNotNull(queryResponse.data(), "查询结果不应为空");
+        assertTrue(queryResponse.getSuccess(), "工单查询应该成功");
+        assertNotNull(queryResponse.getData(), "查询结果不应为空");
 
         // 验证返回的数据
-        WorkOrder workOrderData = (WorkOrder) queryResponse.data();
+        WorkOrder workOrderData = (WorkOrder) queryResponse.getData();
         assertEquals("测试工单", workOrderData.getTitle(), "标题应匹配");
         assertEquals("这是一个测试工单的内容", workOrderData.getContent(), "内容应匹配");
         assertEquals("测试部门", workOrderData.getDepartment(), "部门应匹配");
@@ -75,9 +75,9 @@ class WorkOrderServiceTest {
 
         // 创建工单
         Response createResponse = workOrderService.createWorkOrder(orderData);
-        assertTrue(createResponse.success(), "工单创建应该成功");
+        assertTrue(createResponse.getSuccess(), "工单创建应该成功");
 
-        String orderId = (String) ((Map<String, Object>) createResponse.data()).get("orderId");
+        String orderId = (String) ((Map<String, Object>) createResponse.getData()).get("orderId");
         assertNotNull(orderId, "订单ID不应为空");
 
         // 测试工单分拨
@@ -87,12 +87,12 @@ class WorkOrderServiceTest {
 
         Response assignResponse = workOrderService.processWorkOrder(orderId, WorkOrderAction.ASSIGN, assignPayload);
         System.out.println("工单分拨响应: " + assignResponse);
-        assertTrue(assignResponse.success(), "工单分拨应该成功");
+        assertTrue(assignResponse.getSuccess(), "工单分拨应该成功");
 
         // 测试工单受理
         Response acceptResponse = workOrderService.processWorkOrder(orderId, WorkOrderAction.ACCEPT, new HashMap<>());
         System.out.println("工单受理响应: " + acceptResponse);
-        assertTrue(acceptResponse.success(), "工单受理应该成功");
+        assertTrue(acceptResponse.getSuccess(), "工单受理应该成功");
 
         // 测试工单回复
         Map<String, Object> replyPayload = new HashMap<>();
@@ -100,7 +100,7 @@ class WorkOrderServiceTest {
 
         Response replyResponse = workOrderService.processWorkOrder(orderId, WorkOrderAction.REPLY, replyPayload);
         System.out.println("工单回复响应: " + replyResponse);
-        assertTrue(replyResponse.success(), "工单回复应该成功");
+        assertTrue(replyResponse.getSuccess(), "工单回复应该成功");
     }
 
     @Test
@@ -115,9 +115,9 @@ class WorkOrderServiceTest {
 
         // 创建工单
         Response createResponse = workOrderService.createWorkOrder(orderData);
-        assertTrue(createResponse.success(), "工单创建应该成功");
+        assertTrue(createResponse.getSuccess(), "工单创建应该成功");
 
-        String orderId = (String) ((Map<String, Object>) createResponse.data()).get("orderId");
+        String orderId = (String) ((Map<String, Object>) createResponse.getData()).get("orderId");
         assertNotNull(orderId, "订单ID不应为空");
 
         // 将工单流转到回复状态，以便能够提交反馈
@@ -141,15 +141,15 @@ class WorkOrderServiceTest {
 
         Response feedbackResponse = workOrderService.submitFeedback(orderId, feedbackData);
         System.out.println("提交反馈响应: " + feedbackResponse);
-        assertTrue(feedbackResponse.success(), "提交反馈应该成功");
+        assertTrue(feedbackResponse.getSuccess(), "提交反馈应该成功");
     }
 
     @Test
     void testErrorScenarios() {
         // 测试无效工单ID
         Response invalidQueryResponse = workOrderService.queryWorkOrder("invalid_order_id");
-        assertFalse(invalidQueryResponse.success(), "查询无效工单ID应该失败");
-        assertEquals("工单不存在", invalidQueryResponse.message(), "错误消息应该匹配");
+        assertFalse(invalidQueryResponse.getSuccess(), "查询无效工单ID应该失败");
+        assertEquals("工单不存在", invalidQueryResponse.getMessage(), "错误消息应该匹配");
 
         // 测试错误的状态流转
         Map<String, Object> orderData = new HashMap<>();
@@ -160,14 +160,14 @@ class WorkOrderServiceTest {
         orderData.put("department", "错误测试部");
 
         Response createResponse = workOrderService.createWorkOrder(orderData);
-        assertTrue(createResponse.success(), "工单创建应该成功");
+        assertTrue(createResponse.getSuccess(), "工单创建应该成功");
 
-        String orderId = (String) ((Map<String, Object>) createResponse.data()).get("orderId");
+        String orderId = (String) ((Map<String, Object>) createResponse.getData()).get("orderId");
         assertNotNull(orderId, "订单ID不应为空");
 
         // 尝试在未分配状态下直接受理（应该是错误的）
         Response invalidAcceptResponse = workOrderService.processWorkOrder(orderId, WorkOrderAction.ACCEPT, new HashMap<>());
         System.out.println("无效受理操作响应: " + invalidAcceptResponse);
-        assertFalse(invalidAcceptResponse.success(), "无效的工单状态流转应该失败");
+        assertFalse(invalidAcceptResponse.getSuccess(), "无效的工单状态流转应该失败");
     }
 }
