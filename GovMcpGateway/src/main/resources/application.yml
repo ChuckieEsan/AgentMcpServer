@@ -14,13 +14,19 @@ spring:
     import:
       - optional:nacos:gov-service-mock-mcp.yml?group=DEFAULT_GROUP&refreshEnabled=true
 
-# MCP Server 配置
+  # MCP Server 配置
   ai:
     mcp:
       server:
         enabled: true
+        # SSE 端点路径（默认值就是 /sse）
+        sse:
+          path: /sse
+        # 消息端点路径
+        message:
+          path: /mcp/message
 
-# Dubbo 配置
+  # Dubbo 配置
 # 注意：
 # - Nacos 服务分组（Spring Cloud）和 Dubbo 接口分组是不同的概念
 # - RegistryConfig 的 group 是 Nacos 服务分组（默认 DEFAULT_GROUP）
