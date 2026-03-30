@@ -149,7 +149,7 @@ class WorkOrderServiceTest {
         // 测试无效工单ID
         Response invalidQueryResponse = workOrderService.queryWorkOrder("invalid_order_id");
         assertFalse(invalidQueryResponse.getSuccess(), "查询无效工单ID应该失败");
-        assertEquals("工单不存在", invalidQueryResponse.getMessage(), "错误消息应该匹配");
+        assertEquals("工单不存在: invalid_order_id", invalidQueryResponse.getMessage(), "错误消息应该匹配");
 
         // 测试错误的状态流转
         Map<String, Object> orderData = new HashMap<>();

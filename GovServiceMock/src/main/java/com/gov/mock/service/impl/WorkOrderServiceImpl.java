@@ -2,11 +2,12 @@ package com.gov.mock.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gov.mock.dto.Response;
+import com.gov.mock.enums.ErrorCode;
 import com.gov.mock.enums.WorkOrderAction;
-import com.gov.mock.model.WorkOrder;
+import com.gov.mock.enums.WorkOrderStatus;
 import com.gov.mock.model.PoliticalElements;
 import com.gov.mock.model.UserFeedback;
-import com.gov.mock.enums.WorkOrderStatus;
+import com.gov.mock.model.WorkOrder;
 import com.gov.mock.service.WorkOrderService;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,6 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         order1.setDepartment("环保局");
         order1.setCreateTime(LocalDateTime.now().toString());
 
-        // 初始化多主体列表
         List<String> subjects1 = new ArrayList<>();
         subjects1.add("建工集团第三施工队");
         subjects1.add("长青街道办事处");
@@ -50,7 +50,6 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 subjects1
         );
         order1.setElements(elements1);
-
         DB.put(order1.getId(), order1);
 
         // 示例工单2：小区物业管理问题
@@ -64,7 +63,6 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         order2.setDepartment("住建局");
         order2.setCreateTime(LocalDateTime.now().minusDays(1).toString());
 
-        // 初始化多主体列表
         List<String> subjects2 = new ArrayList<>();
         subjects2.add("XX物业管理公司");
         subjects2.add("XX小区业委会");
@@ -79,7 +77,6 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         );
         order2.setElements(elements2);
         order2.setUpdateTime(LocalDateTime.now().minusHours(2).toString());
-
         DB.put(order2.getId(), order2);
     }
 
@@ -88,15 +85,26 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         try {
             WorkOrder dto = objectMapper.convertValue(orderData, WorkOrder.class);
 
+            // 必填校验
+            if (dto.getUserId() == null || dto.getUserId().isBlank()) {
+                return Response.error(ErrorCode.BIZ_MISSING_REQUIRED, "缺少必填字段: userId");
+            }
+            if (dto.getUserPhone() == null || dto.getUserPhone().isBlank()) {
+                return Response.error(ErrorCode.BIZ_MISSING_REQUIRED, "缺少必填字段: userPhone");
+            }
+            if (dto.getTitle() == null || dto.getTitle().isBlank()) {
+                return Response.error(ErrorCode.BIZ_MISSING_REQUIRED, "缺少必填字段: title");
+            }
+
             dto.setId("GD_" + System.currentTimeMillis());
             dto.setStatus(WorkOrderStatus.UNASSIGNED);
             dto.setCreateTime(LocalDateTime.now().toString());
             DB.put(dto.getId(), dto);
             System.out.println(">>> [Created] ID: " + dto.getId() + ", Title: " + dto.getTitle());
-            return new Response(true, "工单创建成功", Map.of("orderId", dto.getId()));
+            return Response.ok(Map.of("orderId", dto.getId()));
         } catch (Exception e) {
             System.err.println("创建工单失败: " + e.getMessage());
-            return new Response(false, "参数错误: " + e.getMessage());
+            return Response.error(ErrorCode.BIZ_VALIDATION_FAILED, "参数错误: " + e.getMessage());
         }
     }
 
@@ -104,64 +112,63 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     public Response queryWorkOrder(String orderId) {
         WorkOrder dto = DB.get(orderId);
         if (dto == null) {
-            return new Response(false, "工单不存在");
+            return Response.error(ErrorCode.BIZ_NOT_FOUND, "工单不存在: " + orderId);
         }
-
-        // 将DTO转换为Map返回
-        return new Response(true, "工单获取成功", dto);
+        return Response.ok(dto);
     }
 
     @Override
     public Response processWorkOrder(String orderId, WorkOrderAction action, Map<String, Object> payload) {
         WorkOrder dto = DB.get(orderId);
         if (dto == null) {
-            return new Response(false, "工单不存在");
+            return Response.error(ErrorCode.BIZ_NOT_FOUND, "工单不存在: " + orderId);
         }
 
         WorkOrderStatus current = dto.getStatus();
 
-        // 状态机控制 - 确保按顺序流转
-        if (action.equals(WorkOrderAction.ASSIGN)) {
-            if (!current.equals(WorkOrderStatus.UNASSIGNED)) {
-                return error(current.toString(), action, "只有未分拨的工单才能被分拨");
+        // 状态机控制
+        if (action == WorkOrderAction.ASSIGN) {
+            if (current != WorkOrderStatus.UNASSIGNED) {
+                return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+                        String.format("当前状态 [%s] 不允许执行 [ASSIGN]，只有 [UNASSIGNED] 状态才能分拨", current));
             }
             dto.setStatus(WorkOrderStatus.ASSIGNED);
             dto.setDepartment((String) payload.getOrDefault("department", dto.getDepartment()));
             dto.setHandler((String) payload.get("handler"));
             System.out.println(">>> [ASSIGN] 工单 " + orderId + " 已分拨至部门: " + dto.getDepartment());
-        }
-        else if (action.equals(WorkOrderAction.ACCEPT)) {
-            if (!current.equals(WorkOrderStatus.ASSIGNED)) {
-                return error(current.toString(), action, "只有已分拨状态的工单才能被受理");
+        } else if (action == WorkOrderAction.ACCEPT) {
+            if (current != WorkOrderStatus.ASSIGNED) {
+                return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+                        String.format("当前状态 [%s] 不允许执行 [ACCEPT]，只有 [ASSIGNED] 状态才能受理", current));
             }
             dto.setStatus(WorkOrderStatus.ACCEPTED);
             System.out.println(">>> [ACCEPT] 工单 " + orderId + " 已被受理");
-        }
-        else if (action.equals(WorkOrderAction.REPLY)) {
-            if (!current.equals(WorkOrderStatus.ACCEPTED)) {
-                return error(current.toString(), action, "只有已受理状态的工单才能回复");
+        } else if (action == WorkOrderAction.REPLY) {
+            if (current != WorkOrderStatus.ACCEPTED) {
+                return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+                        String.format("当前状态 [%s] 不允许执行 [REPLY]，只有 [ACCEPTED] 状态才能回复", current));
             }
             dto.setStatus(WorkOrderStatus.REPLIED);
             dto.setReplyContent((String) payload.get("replyContent"));
             System.out.println(">>> [REPLY] 工单 " + orderId + " 已回复");
-        }
-        else {
-            return new Response(false, "未知动作: " + action + ". 支持的操作: ASSIGN, ACCEPT, REPLY");
+        } else {
+            return Response.error(ErrorCode.BIZ_PROCESS_FAILED, "未知动作: " + action);
         }
 
         dto.setUpdateTime(LocalDateTime.now().toString());
-        return new Response(true, "操作成功", Map.of("currentStatus", dto.getStatus()));
+        return Response.ok(Map.of("currentStatus", dto.getStatus()));
     }
 
     @Override
     public Response submitFeedback(String orderId, Map<String, Object> feedbackData) {
         WorkOrder dto = DB.get(orderId);
         if (dto == null) {
-            return new Response(false, "工单不存在");
+            return Response.error(ErrorCode.BIZ_NOT_FOUND, "工单不存在: " + orderId);
         }
 
-        if (!dto.getStatus().equals(WorkOrderStatus.REPLIED)) {
-            return new Response(false, "工单未回复，无法提交评价。当前状态: " + dto.getStatus());
+        if (dto.getStatus() != WorkOrderStatus.REPLIED) {
+            return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+                    String.format("当前状态 [%s] 不允许提交评价，只有 [REPLIED] 状态才能评价", dto.getStatus()));
         }
 
         try {
@@ -169,21 +176,11 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             dto.setUserFeedback(feedback);
             dto.setStatus(WorkOrderStatus.RATED);
             dto.setUpdateTime(LocalDateTime.now().toString());
-
             System.out.println(">>> [FEEDBACK] 工单 " + orderId + " 评价已提交");
-            return new Response(true, "评价已提交");
+            return Response.ok();
         } catch (Exception e) {
             System.err.println("提交评价失败: " + e.getMessage());
-            return new Response(false, "评价数据格式错误: " + e.getMessage());
+            return Response.error(ErrorCode.BIZ_VALIDATION_FAILED, "评价数据格式错误: " + e.getMessage());
         }
-    }
-
-
-
-    // 错误响应辅助方法
-    private Response error(String status, WorkOrderAction action, String msg) {
-        String errorMsg = String.format("当前状态 [%s] 不允许执行 [%s] 操作。%s", status, action, msg);
-        System.err.println(errorMsg);
-        return new Response(false, errorMsg);
     }
 }
