@@ -1,0 +1,46 @@
+# 测试用 application.yml
+# 不依赖 Nacos，直接从 classpath 加载 agent 工具配置
+
+spring:
+  application:
+    name: gov-mcp-gateway
+  # 禁用 Nacos 配置中心，测试时从 classpath 加载
+  cloud:
+    nacos:
+      config:
+        enabled: false
+      discovery:
+        enabled: false
+  # 导入本地配置文件
+  config:
+    import:
+      - optional:classpath:gov-service-mock-mcp.yml
+  # MCP Server 配置
+  ai:
+    mcp:
+      server:
+        enabled: true
+        sse:
+          path: /sse
+        message:
+          path: /mcp/message
+
+# Dubbo 配置 - 使用空注册中心（测试时不需要连接）
+dubbo:
+  application:
+    name: ${spring.application.name}
+    qos-enable: false
+  registry:
+    address: nacos://localhost:8848
+  protocol:
+    name: dubbo
+  consumer:
+    check: false
+
+server:
+  port: 8083
+
+logging:
+  level:
+    com.gov.gateway: DEBUG
+    org.apache.dubbo: INFO
