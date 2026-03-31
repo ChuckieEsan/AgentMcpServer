@@ -2,44 +2,54 @@
 # 上传到 Nacos 后，Gateway 会自动加载并注册这些工具
 # Data ID: gov-service-mock-mcp.yml
 # Group: DEFAULT_GROUP
+#
+# 配置说明：
+# - authRoles: 允许调用此工具的角色列表 (CITIZEN/STAFF/ADMIN)
+# - authLevel: 调用所需的最低实名等级 (L1/L2/L3)
+# - idempotent: 是否为幂等操作（写操作需要）
+# - paramAssembly: 参数装配规则
+#   - source: CONTEXT (从身份上下文注入) | LLM_PAYLOAD (Agent传入) | CONSTANT (常量)
+#   - contextKey: 当 source=CONTEXT 时，指定从 AuthContext 取值的 key
+#   - payloadKey: 当 source=LLM_PAYLOAD 时，指定从 Agent 参数中获取的 key（支持嵌套如 orderData.title）
+#   - targetKey: 目标参数名（Dubbo 方法的参数名）
 
 agent:
   tools:
     # ==========================================
     # 场景 1: 创建工单 (由 Agent 调用)
+    # 特点：敏感参数 userId/userPhone 从 Context 注入
     # ==========================================
     - name: "create_gov_work_order"
-      description: "创建政务工单。用户提交诉求后，AI Agent 调用此接口创建工单。需提供用户信息、工单标题、详细描述、涉及部门等信息。"
+      description: "创建政务工单。用户提交诉求后，AI Agent 调用此接口创建工单。需提供工单标题、详细描述、涉及部门等信息。"
       type: "DUBBO"
+      # Agent 可见的 schema - 扁平结构，不包含敏感字段
       inputSchema: '{
         "type": "object",
         "properties": {
-          "orderData": {
+          "title": {"type": "string", "description": "工单标题"},
+          "content": {"type": "string", "description": "详细描述"},
+          "department": {"type": "string", "description": "责任部门"},
+          "elements": {
             "type": "object",
-            "description": "工单详细数据",
+            "description": "五大核心要素",
             "properties": {
-              "userId": {"type": "string", "description": "提交人ID"},
-              "userPhone": {"type": "string", "description": "联系方式"},
-              "title": {"type": "string", "description": "工单标题"},
-              "content": {"type": "string", "description": "详细描述"},
-              "department": {"type": "string", "description": "责任部门"},
-              "elements": {
-                "type": "object",
-                "description": "五大核心要素",
-                "properties": {
-                  "time": {"type": "string", "description": "时间"},
-                  "location": {"type": "string", "description": "地点"},
-                  "event": {"type": "string", "description": "核心事件"},
-                  "goal": {"type": "string", "description": "诉求目标"},
-                  "subjects": {"type": "array", "description": "涉及主体", "items": {"type": "string"}}
-                }
-              }
-            },
-            "required":["userId", "userPhone", "title", "content"]
+              "time": {"type": "string", "description": "时间"},
+              "location": {"type": "string", "description": "地点"},
+              "event": {"type": "string", "description": "核心事件"},
+              "goal": {"type": "string", "description": "诉求目标"},
+              "subjects": {"type": "array", "description": "涉及主体", "items": {"type": "string"}}
+            }
           }
         },
-        "required": ["orderData"]
+        "required": ["title", "content"]
       }'
+      # 鉴权配置
+      authRoles:
+        - "CITIZEN"
+        - "STAFF"
+        - "ADMIN"
+      authLevel: "L1"
+      idempotent: true
       metadata:
         interface: "com.gov.mock.service.WorkOrderService"
         method: "createWorkOrder"
@@ -49,9 +59,42 @@ agent:
           - "java.util.Map"
         paramNames:
           - "orderData"
+      # 参数装配规则：敏感字段从 Context 注入，组装成 orderData Map
+      paramAssembly:
+        # 从 AuthContext 注入 userId
+        - index: 0
+          source: "CONTEXT"
+          contextKey: "govUid"
+          targetKey: "userId"
+        # 从 AuthContext 注入 userPhone
+        - index: 0
+          source: "CONTEXT"
+          contextKey: "userPhone"
+          targetKey: "userPhone"
+        # 从 Agent payload 提取 title
+        - index: 0
+          source: "LLM_PAYLOAD"
+          payloadKey: "title"
+          targetKey: "title"
+        # 从 Agent payload 提取 content
+        - index: 0
+          source: "LLM_PAYLOAD"
+          payloadKey: "content"
+          targetKey: "content"
+        # 从 Agent payload 提取 department
+        - index: 0
+          source: "LLM_PAYLOAD"
+          payloadKey: "department"
+          targetKey: "department"
+        # 从 Agent payload 提取 elements
+        - index: 0
+          source: "LLM_PAYLOAD"
+          payloadKey: "elements"
+          targetKey: "elements"
 
     # ==========================================
     # 场景 2: 查询工单详情
+    # 说明：参数完全由 Agent 传入，无敏感信息注入
     # ==========================================
     - name: "query_gov_work_order"
       description: "根据工单ID查询政务工单详情。返回工单的基本信息、当前状态、处理进度等。"
@@ -63,6 +106,12 @@ agent:
         },
         "required": ["orderId"]
       }'
+      authRoles:
+        - "CITIZEN"
+        - "STAFF"
+        - "ADMIN"
+      authLevel: "L1"
+      idempotent: false
       metadata:
         interface: "com.gov.mock.service.WorkOrderService"
         method: "queryWorkOrder"
@@ -72,50 +121,15 @@ agent:
           - "java.lang.String"
         paramNames:
           - "orderId"
+      paramAssembly:
+        - index: 0
+          source: "LLM_PAYLOAD"
+          payloadKey: "orderId"
+          targetKey: "orderId"
 
     # ==========================================
-    # 场景 3: 工单流转处理
-    # ==========================================
-    - name: "process_gov_work_order"
-      description: "工单流转处理。职能部门处理工单，包括：\n- ASSIGN: 分拨（将工单分拨给具体部门）\n- ACCEPT: 受理（部门确认接收并开始处理）\n- REPLY: 回复（处理完成后回复用户）"
-      type: "DUBBO"
-      inputSchema: '{
-        "type": "object",
-        "properties": {
-          "orderId": {"type": "string", "description": "工单唯一编号"},
-          "action": {
-            "type": "string",
-            "description": "操作类型",
-            "enum": ["ASSIGN", "ACCEPT", "REPLY"]
-          },
-          "payload": {
-            "type": "object",
-            "description": "操作数据",
-            "properties": {
-              "department": {"type": "string", "description": "分拨部门(ASSIGN时必填)"},
-              "handler": {"type": "string", "description": "经办人"},
-              "replyContent": {"type": "string", "description": "回复内容(REPLY时必填)"}
-            }
-          }
-        },
-        "required":["orderId", "action", "payload"]
-      }'
-      metadata:
-        interface: "com.gov.mock.service.WorkOrderService"
-        method: "processWorkOrder"
-        group: "gov-political"
-        version: "1.0.0"
-        paramTypes:
-          - "java.lang.String"
-          - "com.gov.mock.enums.WorkOrderAction"
-          - "java.util.Map"
-        paramNames:
-          - "orderId"
-          - "action"
-          - "payload"
-
-    # ==========================================
-    # 场景 4: 提交用户评价
+    # 场景 3: 提交用户评价
+    # 说明：群众只能评价自己的工单，userId 从 Context 注入
     # ==========================================
     - name: "submit_work_order_feedback"
       description: "用户提交评价。工单处理完成后，用户可以对处理结果进行评价，包括：时效评分、态度评分、结果评分（1-5分）以及文字评价。"
@@ -138,6 +152,12 @@ agent:
         },
         "required": ["orderId", "feedbackData"]
       }'
+      authRoles:
+        - "CITIZEN"
+        - "STAFF"
+        - "ADMIN"
+      authLevel: "L1"
+      idempotent: true
       metadata:
         interface: "com.gov.mock.service.WorkOrderService"
         method: "submitFeedback"
@@ -149,3 +169,12 @@ agent:
         paramNames:
           - "orderId"
           - "feedbackData"
+      paramAssembly:
+        - index: 0
+          source: "LLM_PAYLOAD"
+          payloadKey: "orderId"
+          targetKey: "orderId"
+        - index: 1
+          source: "LLM_PAYLOAD"
+          payloadKey: "feedbackData"
+          targetKey: "feedbackData"
