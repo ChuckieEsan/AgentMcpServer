@@ -32,7 +32,7 @@ public class AuthContextInitFilter implements Filter {
             if (request instanceof HttpServletRequest httpRequest) {
                 // 对于 MCP 工具调用请求，提取并存储 AuthContext
                 // 注意：此 Filter 会应用于所有请求，包括 SSE 和 MCP message 请求
-                authInterceptor.extractAndStoreAuthContext();
+                authInterceptor.loadAuthContext();
             }
             chain.doFilter(request, response);
         } finally {

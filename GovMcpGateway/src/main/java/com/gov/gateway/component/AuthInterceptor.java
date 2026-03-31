@@ -38,14 +38,13 @@ public class AuthInterceptor {
     }
 
     /**
-     * 从当前 HTTP 请求中提取身份信息构建 AuthContext
-     * 并存储到 ThreadLocal 中
+     * 从当前 HTTP 请求中提取身份信息并存储到 ThreadLocal
+     * 使得后续的 ToolStrategyFactory 等组件可以访问 AuthContext
      */
-    public AuthContext extractAndStoreAuthContext() {
+    public void loadAuthContext() {
         AuthContext context = extractAuthContext();
         AUTH_CONTEXT_HOLDER.set(context);
         log.debug("AuthContext 已存储到 ThreadLocal: govUid={}", context.getGovUid());
-        return context;
     }
 
     /**
