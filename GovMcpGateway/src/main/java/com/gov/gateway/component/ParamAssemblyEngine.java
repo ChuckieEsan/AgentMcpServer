@@ -41,23 +41,26 @@ public class ParamAssemblyEngine {
 
         // 处理每个 index 的规则
         for (Map.Entry<Integer, List<ParamAssemblyRule>> entry : rulesByIndex.entrySet()) {
-            Integer index = entry.getKey();
             List<ParamAssemblyRule> indexRules = entry.getValue();
 
-            // 获取该 index 的 targetKey（取第一条规则的 targetKey）
-            String targetKey = indexRules.stream()
-                    .map(ParamAssemblyRule::getTargetKey)
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse("param" + index);
+            // 检查是否有共同前缀
+            String commonPrefix = extractCommonPrefix(indexRules);
 
-            // 构建该 index 的参数值（可能是简单值或 Map）
-            Object paramValue = buildParamValue(indexRules, authCtx, payload);
-
-            if (paramValue != null) {
-                result.put(targetKey, paramValue);
-                log.debug("参数装配: index={}, targetKey={}, value={}",
-                        index, targetKey, paramValue);
+            if (commonPrefix != null) {
+                // 有共同前缀：如 orderData.userId, orderData.userPhone
+                // 合并成一个 Map，key 为前缀
+                Map<String, Object> mapValue = buildParamValueWithPrefix(indexRules, authCtx, payload, commonPrefix);
+                if (mapValue != null) {
+                    result.put(commonPrefix, mapValue);
+                }
+            } else {
+                // 没有共同前缀：每条规则独立作为 result 的 key
+                for (ParamAssemblyRule rule : indexRules) {
+                    Object value = resolveValue(rule, authCtx, payload);
+                    if (value != null && rule.getTargetKey() != null) {
+                        result.put(rule.getTargetKey(), value);
+                    }
+                }
             }
         }
 
@@ -65,30 +68,44 @@ public class ParamAssemblyEngine {
     }
 
     /**
-     * 构建单个参数的值
-     * 如果有多条规则针对同一个 index，构建一个 Map；否则返回单个值
+     * 构建有共同前缀的参数值
      */
-    private Object buildParamValue(List<ParamAssemblyRule> rules,
-                                    AuthContext authCtx,
-                                    Map<String, Object> payload) {
-        if (rules == null || rules.isEmpty()) {
-            return null;
-        }
-
-        // 如果只有一条规则，直接返回其值
-        if (rules.size() == 1) {
-            return resolveValue(rules.get(0), authCtx, payload);
-        }
-
-        // 多条规则，构建一个 Map
+    private Map<String, Object> buildParamValueWithPrefix(List<ParamAssemblyRule> rules,
+                                                           AuthContext authCtx,
+                                                           Map<String, Object> payload,
+                                                           String commonPrefix) {
         Map<String, Object> mapValue = new HashMap<>();
         for (ParamAssemblyRule rule : rules) {
             Object value = resolveValue(rule, authCtx, payload);
             if (value != null && rule.getTargetKey() != null) {
-                mapValue.put(rule.getTargetKey(), value);
+                String targetKey = rule.getTargetKey();
+                // 去掉前缀后存入 Map
+                if (targetKey.startsWith(commonPrefix + ".")) {
+                    mapValue.put(targetKey.substring(commonPrefix.length() + 1), value);
+                }
             }
         }
         return mapValue.isEmpty() ? null : mapValue;
+    }
+
+    /**
+     * 构建单个参数的值
+     * 如果有多条规则针对同一个 index，构建一个 Map；否则返回单个值
+     * 支持嵌套 targetKey，如 orderData.userId
+     */
+    /**
+     * 提取 targetKey 的共同前缀
+     * 如 ["orderData.userId", "orderData.userPhone"] -> "orderData"
+     */
+    private String extractCommonPrefix(List<ParamAssemblyRule> rules) {
+        Set<String> prefixes = rules.stream()
+                .map(ParamAssemblyRule::getTargetKey)
+                .filter(Objects::nonNull)
+                .filter(key -> key.contains("."))
+                .map(key -> key.substring(0, key.indexOf(".")))
+                .collect(Collectors.toSet());
+
+        return prefixes.size() == 1 ? prefixes.iterator().next() : null;
     }
 
     /**
@@ -158,19 +175,27 @@ public class ParamAssemblyEngine {
         String[] parts = nestedKey.split("\\.", 2);
         Object value = payload.get(parts[0]);
 
+        /*
+        nestedKey 是一个字符串，比如 "orderData.title"
+        为了能够支持分层解析，这里设计成一个递归，我们本层先处理 orderData, 下一层再处理 title.
+        我们可以把 nestedKey 当成是一个路径. 如果 value 是 Map, 后续还需要继续处理
+        否则, 就可以直接返回提取到的结果
+         */
         if (value == null) {
             return null;
         }
 
         if (parts.length == 1) {
             return value;
-        }
-
-        // 继续解析嵌套结构
-        if (value instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> nestedMap = (Map<String, Object>) value;
-            return resolveNestedKey(nestedMap, parts[1]);
+        } else if (parts.length == 2) {
+           // parts.length == 2, 说明后面还有，继续处理
+            if (value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nestedMap = (Map<String, Object>) value;
+                return resolveNestedKey(nestedMap, parts[1]);
+            } else {
+                throw new RuntimeException("无法解析 Key:" + parts[1] + ", 请检查 payload 结构");
+            }
         }
 
         return null;

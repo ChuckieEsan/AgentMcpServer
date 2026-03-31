@@ -60,7 +60,7 @@ agent:
         paramNames:
           - "orderData"
       # 参数装配规则：敏感字段从 Context 注入，组装成 orderData Map
-      # 使用嵌套 targetKey：orderData.userId, orderData.userPhone 等
+      # 使用嵌套 targetKey：orderData.userId, orderData.title 等
       paramAssembly:
         # 从 AuthContext 注入 userId
         - index: 0
