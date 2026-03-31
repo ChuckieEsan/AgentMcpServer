@@ -20,10 +20,8 @@ spring:
     mcp:
       server:
         enabled: true
-        sse:
-          path: /sse
-        message:
-          path: /mcp/message
+        sse-endpoint: /sse
+        sse-message-endpoint: /mcp/message
 
 # Dubbo 配置 - 使用空注册中心（测试时不需要连接）
 dubbo:
