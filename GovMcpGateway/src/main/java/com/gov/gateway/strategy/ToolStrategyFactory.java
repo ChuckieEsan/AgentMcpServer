@@ -2,9 +2,8 @@ package com.gov.gateway.strategy;
 
 import com.gov.gateway.component.AuthInterceptor;
 import com.gov.gateway.component.ParamAssemblyEngine;
-import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.model.AuthContext;
-import com.gov.gateway.core.model.ToolType;
+import com.gov.gateway.core.enums.ToolType;
 import com.gov.gateway.core.model.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

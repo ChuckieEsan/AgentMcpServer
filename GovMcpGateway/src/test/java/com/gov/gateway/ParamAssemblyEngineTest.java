@@ -1,6 +1,9 @@
 package com.gov.gateway;
 
 import com.gov.gateway.component.ParamAssemblyEngine;
+import com.gov.gateway.core.enums.AuthLevel;
+import com.gov.gateway.core.enums.ParamSource;
+import com.gov.gateway.core.enums.UserType;
 import com.gov.gateway.core.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

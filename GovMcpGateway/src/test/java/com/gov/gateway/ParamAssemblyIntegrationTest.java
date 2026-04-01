@@ -1,10 +1,11 @@
 package com.gov.gateway;
 
 import com.gov.gateway.config.ToolProperties;
+import com.gov.gateway.core.enums.ParamSource;
 import com.gov.gateway.core.model.AuthContext;
-import com.gov.gateway.core.model.AuthLevel;
+import com.gov.gateway.core.enums.AuthLevel;
 import com.gov.gateway.core.model.ToolDefinition;
-import com.gov.gateway.core.model.UserType;
+import com.gov.gateway.core.enums.UserType;
 import com.gov.gateway.strategy.ToolStrategyFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,13 +67,13 @@ class ParamAssemblyIntegrationTest {
 
         // 验证有 CONTEXT 规则（注入 userId, userPhone）
         long contextRules = createTool.getParamAssembly().stream()
-                .filter(r -> r.getSource() == com.gov.gateway.core.model.ParamSource.CONTEXT)
+                .filter(r -> r.getSource() == ParamSource.CONTEXT)
                 .count();
         assertEquals(2, contextRules, "应该有 2 条 CONTEXT 规则");
 
         // 验证有 LLM_PAYLOAD 规则（提取 title, content 等）
         long payloadRules = createTool.getParamAssembly().stream()
-                .filter(r -> r.getSource() == com.gov.gateway.core.model.ParamSource.LLM_PAYLOAD)
+                .filter(r -> r.getSource() == ParamSource.LLM_PAYLOAD)
                 .count();
         assertEquals(4, payloadRules, "应该有 4 条 LLM_PAYLOAD 规则");
 
@@ -131,7 +132,7 @@ class ParamAssemblyIntegrationTest {
 
         // 验证是 LLM_PAYLOAD 规则
         var rule = queryTool.getParamAssembly().get(0);
-        assertEquals(com.gov.gateway.core.model.ParamSource.LLM_PAYLOAD, rule.getSource());
+        assertEquals(ParamSource.LLM_PAYLOAD, rule.getSource());
         assertEquals("orderId", rule.getPayloadKey());
         assertEquals("orderId", rule.getTargetKey());
 

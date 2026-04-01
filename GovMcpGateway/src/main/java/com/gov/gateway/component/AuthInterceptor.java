@@ -1,8 +1,8 @@
 package com.gov.gateway.component;
 
 import com.gov.gateway.core.model.AuthContext;
-import com.gov.gateway.core.model.AuthLevel;
-import com.gov.gateway.core.model.UserType;
+import com.gov.gateway.core.enums.AuthLevel;
+import com.gov.gateway.core.enums.UserType;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

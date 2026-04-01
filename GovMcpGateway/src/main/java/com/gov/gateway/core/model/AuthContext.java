@@ -1,5 +1,7 @@
 package com.gov.gateway.core.model;
 
+import com.gov.gateway.core.enums.AuthLevel;
+import com.gov.gateway.core.enums.UserType;
 import lombok.Builder;
 import lombok.Data;
 

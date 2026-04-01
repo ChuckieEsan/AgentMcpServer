@@ -2,7 +2,7 @@ package com.gov.gateway.component;
 
 import com.gov.gateway.core.model.AuthContext;
 import com.gov.gateway.core.model.ParamAssemblyRule;
-import com.gov.gateway.core.model.ParamSource;
+import com.gov.gateway.core.enums.ParamSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

@@ -1,9 +1,8 @@
 package com.gov.gateway.strategy.impl;
 
-import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.exception.ToolExecutionException;
 import com.gov.gateway.core.model.ToolDefinition;
-import com.gov.gateway.core.model.ToolType;
+import com.gov.gateway.core.enums.ToolType;
 import com.gov.gateway.strategy.ToolStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;

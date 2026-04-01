@@ -1,4 +1,4 @@
-package com.gov.gateway.core.model;
+package com.gov.gateway.core.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -1,5 +1,6 @@
 package com.gov.gateway.core.model;
 
+import com.gov.gateway.core.enums.ParamSource;
 import lombok.Data;
 
 /**

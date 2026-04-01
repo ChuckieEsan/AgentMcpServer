@@ -1,8 +1,7 @@
 package com.gov.gateway;
 
-import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.model.ToolDefinition;
-import com.gov.gateway.core.model.ToolType;
+import com.gov.gateway.core.enums.ToolType;
 import com.gov.gateway.strategy.impl.DubboGenericStrategy;
 import org.apache.dubbo.rpc.RpcException;
 import org.junit.jupiter.api.BeforeEach;

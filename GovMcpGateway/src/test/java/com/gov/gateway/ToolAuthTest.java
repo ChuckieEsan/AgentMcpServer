@@ -1,6 +1,9 @@
 package com.gov.gateway;
 
 import com.gov.gateway.config.ToolProperties;
+import com.gov.gateway.core.enums.AuthLevel;
+import com.gov.gateway.core.enums.ParamSource;
+import com.gov.gateway.core.enums.UserType;
 import com.gov.gateway.core.model.*;
 import com.gov.gateway.strategy.ToolStrategyFactory;
 import org.junit.jupiter.api.BeforeEach;

@@ -2,10 +2,8 @@ package com.gov.gateway;
 
 import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.model.ToolDefinition;
-import com.gov.gateway.core.model.ToolType;
 import com.gov.gateway.strategy.ToolStrategyFactory;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 

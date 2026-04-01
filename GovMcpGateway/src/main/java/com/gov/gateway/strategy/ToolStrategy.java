@@ -1,7 +1,7 @@
 package com.gov.gateway.strategy;
 
 import com.gov.gateway.core.model.ToolDefinition;
-import com.gov.gateway.core.model.ToolType;
+import com.gov.gateway.core.enums.ToolType;
 
 import java.util.Map;
 
