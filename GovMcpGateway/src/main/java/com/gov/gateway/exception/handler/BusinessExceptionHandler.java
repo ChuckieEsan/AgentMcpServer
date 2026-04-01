@@ -1,17 +1,17 @@
 package com.gov.gateway.exception.handler;
 
-import com.gov.gateway.core.enums.ToolErrorType;
-import com.gov.gateway.core.exception.ToolException;
-import com.gov.gateway.exception.AbstractExceptionHandler;
-import org.apache.dubbo.rpc.service.GenericException;
+import com.gov.gateway.core.dto.ToolError;
+import com.gov.gateway.exception.ToolExceptionHandler;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 /**
- * 处理业务错误
- * 如：业务校验失败、状态不对、工单不存在等
+ * 处理业务错误（直接的业务异常，不通过 GenericException 包装）
  */
-public class BusinessExceptionHandler extends AbstractExceptionHandler {
+@Component
+@Order(3)
+public class BusinessExceptionHandler implements ToolExceptionHandler {
 
-    // TODO: 后续可以从 nacos 读取下游服务可能的业务异常，而无需使用关键词匹配
     private static final String[] BUSINESS_KEYWORDS = {
         "not found",
         "不存在",
@@ -26,43 +26,16 @@ public class BusinessExceptionHandler extends AbstractExceptionHandler {
     };
 
     @Override
-    protected boolean canHandle(Throwable e) {
-        // 泛化调用中的业务异常
-        if (e instanceof GenericException) {
-            GenericException ge = (GenericException) e;
-            String message = ge.getExceptionMessage();
-
-            // 检查消息中是否包含业务关键字
-            if (message != null) {
-                String lowerMsg = message.toLowerCase();
-                for (String keyword : BUSINESS_KEYWORDS) {
-                    if (lowerMsg.contains(keyword.toLowerCase())) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        // 直接的业务异常
+    public ToolError handle(Throwable e, Object result) {
         String message = e.getMessage();
         if (message != null) {
             String lowerMsg = message.toLowerCase();
             for (String keyword : BUSINESS_KEYWORDS) {
                 if (lowerMsg.contains(keyword.toLowerCase())) {
-                    return true;
+                    return ToolError.businessError("业务错误: " + message);
                 }
             }
         }
-
-        return false;
-    }
-
-    @Override
-    protected ToolException buildException(Throwable e) {
-        String message = e.getMessage();
-        if (message == null || message.isBlank()) {
-            message = "业务错误";
-        }
-        return new ToolException(message, ToolErrorType.BUSINESS_ERROR, e);
+        return null;
     }
 }

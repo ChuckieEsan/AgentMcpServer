@@ -1,27 +1,20 @@
 package com.gov.gateway.exception.handler;
 
-import com.gov.gateway.core.enums.ToolErrorType;
-import com.gov.gateway.core.exception.ToolException;
-import com.gov.gateway.exception.AbstractExceptionHandler;
+import com.gov.gateway.core.dto.ToolError;
+import com.gov.gateway.exception.ToolExceptionHandler;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 /**
  * 处理系统错误（兜底）
- * 所有无法识别的异常最终都会到这里
  */
-public class SystemExceptionHandler extends AbstractExceptionHandler {
+@Component
+@Order(10)
+public class SystemExceptionHandler implements ToolExceptionHandler {
 
     @Override
-    protected boolean canHandle(Throwable e) {
-        // 兜底处理器，处理所有其他异常
-        return true;
-    }
-
-    @Override
-    protected ToolException buildException(Throwable e) {
-        String message = e.getMessage();
-        if (message == null || message.isBlank()) {
-            message = "系统错误";
-        }
-        return new ToolException(message, ToolErrorType.SYSTEM_ERROR, e);
+    public ToolError handle(Throwable e, Object result) {
+        String message = e != null ? e.getMessage() : "未知错误";
+        return ToolError.systemError(message);
     }
 }

@@ -219,12 +219,12 @@ class DubboGenericStrategyTest {
 - `GovMcpGateway/src/main/java/com/gov/gateway/core/enums/ToolErrorType.java`
 
 ### 异常责任链
-- `GovMcpGateway/src/main/java/com/gov/gateway/exception/ExceptionHandlerChain.java`
-- `GovMcpGateway/src/main/java/com/gov/gateway/exception/ExceptionHandler.java`
-- `GovMcpGateway/src/main/java/com/gov/gateway/exception/AbstractExceptionHandler.java`
-- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/ClientExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/ToolExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/ToolExceptionHandlerChain.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/core/dto/ToolError.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/DubboRpcExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/GenericExceptionHandler.java`
 - `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/BusinessExceptionHandler.java`
-- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/TransientExceptionHandler.java`
 - `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/SystemExceptionHandler.java`
 
 ### 枚举
