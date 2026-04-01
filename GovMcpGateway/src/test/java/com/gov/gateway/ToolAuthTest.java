@@ -23,8 +23,8 @@ class ToolAuthTest {
     @Autowired
     private ToolProperties toolProperties;
 
-    private ToolProperties.ToolDefinition createTool;
-    private ToolProperties.ToolDefinition queryTool;
+    private ToolDefinition createTool;
+    private ToolDefinition queryTool;
 
     @BeforeEach
     void setUp() {

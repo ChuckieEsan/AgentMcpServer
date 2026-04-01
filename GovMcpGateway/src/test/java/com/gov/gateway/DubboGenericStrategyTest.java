@@ -1,6 +1,7 @@
 package com.gov.gateway;
 
 import com.gov.gateway.config.ToolProperties;
+import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.core.model.ToolType;
 import com.gov.gateway.strategy.impl.DubboGenericStrategy;
 import org.apache.dubbo.rpc.RpcException;
@@ -28,13 +29,13 @@ class DubboGenericStrategyTest {
     @Autowired
     private DubboGenericStrategy strategy;
 
-    private ToolProperties.ToolDefinition queryToolDef;
-    private ToolProperties.ToolDefinition createToolDef;
+    private ToolDefinition queryToolDef;
+    private ToolDefinition createToolDef;
 
     @BeforeEach
     void setUp() {
         // 初始化查询工单工具定义
-        queryToolDef = new ToolProperties.ToolDefinition();
+        queryToolDef = new ToolDefinition();
         queryToolDef.setName("query_gov_work_order");
         queryToolDef.setType(ToolType.DUBBO);
 
@@ -47,7 +48,7 @@ class DubboGenericStrategyTest {
         queryToolDef.setMetadata(queryMetadata);
 
         // 初始化创建工单工具定义
-        createToolDef = new ToolProperties.ToolDefinition();
+        createToolDef = new ToolDefinition();
         createToolDef.setName("create_gov_work_order");
         createToolDef.setType(ToolType.DUBBO);
 
@@ -253,7 +254,7 @@ class DubboGenericStrategyTest {
     @Test
     void testExecuteWithInvalidMetadata() {
         // 缺少必要 metadata 的工具定义
-        ToolProperties.ToolDefinition invalidToolDef = new ToolProperties.ToolDefinition();
+        ToolDefinition invalidToolDef = new ToolDefinition();
         invalidToolDef.setName("invalid_tool");
         invalidToolDef.setType(ToolType.DUBBO);
         invalidToolDef.setMetadata(new HashMap<>()); // 空 metadata
@@ -266,7 +267,7 @@ class DubboGenericStrategyTest {
 
     @Test
     void testExecuteWithMissingInterface() {
-        ToolProperties.ToolDefinition invalidToolDef = new ToolProperties.ToolDefinition();
+        ToolDefinition invalidToolDef = new ToolDefinition();
         invalidToolDef.setName("invalid_tool");
         invalidToolDef.setType(ToolType.DUBBO);
 

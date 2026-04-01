@@ -1,6 +1,7 @@
 package com.gov.gateway;
 
 import com.gov.gateway.config.ToolProperties;
+import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.core.model.ToolType;
 import com.gov.gateway.strategy.ToolStrategyFactory;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,7 @@ class ToolStrategyFactoryTest {
     @Test
     void testExecuteCreateWorkOrder() {
         // 获取创建工单的工具定义
-        ToolProperties.ToolDefinition createTool = toolProperties.getTools().stream()
+        ToolDefinition createTool = toolProperties.getTools().stream()
                 .filter(t -> "create_gov_work_order".equals(t.getName()))
                 .findFirst()
                 .orElse(null);
@@ -54,7 +55,7 @@ class ToolStrategyFactoryTest {
     @Test
     void testExecuteQueryWorkOrder() {
         // 获取查询工单的工具定义
-        ToolProperties.ToolDefinition queryTool = toolProperties.getTools().stream()
+        ToolDefinition queryTool = toolProperties.getTools().stream()
                 .filter(t -> "query_gov_work_order".equals(t.getName()))
                 .findFirst()
                 .orElse(null);
@@ -72,7 +73,7 @@ class ToolStrategyFactoryTest {
     @Test
     void testExecuteProcessWorkOrder() {
         // 获取工单流转的工具定义
-        ToolProperties.ToolDefinition processTool = toolProperties.getTools().stream()
+        ToolDefinition processTool = toolProperties.getTools().stream()
                 .filter(t -> "process_gov_work_order".equals(t.getName()))
                 .findFirst()
                 .orElse(null);
@@ -96,7 +97,7 @@ class ToolStrategyFactoryTest {
     @Test
     void testExecuteSubmitFeedback() {
         // 获取提交评价的工具定义
-        ToolProperties.ToolDefinition feedbackTool = toolProperties.getTools().stream()
+        ToolDefinition feedbackTool = toolProperties.getTools().stream()
                 .filter(t -> "submit_work_order_feedback".equals(t.getName()))
                 .findFirst()
                 .orElse(null);

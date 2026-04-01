@@ -2,12 +2,15 @@ package com.gov.gateway.component;
 
 import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.dto.Response;
+import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.strategy.ToolStrategyFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -18,10 +21,10 @@ import java.util.Map;
  * 动态工具注册桥接器 - 实现 Spring AI 1.1.2 ToolCallbackProvider 接口
  * 将 Nacos 配置的工具定义转换为 MCP 工具
  */
-@Component
+@Configuration
 @RequiredArgsConstructor
 @Slf4j
-public class DynamicToolRegistry implements ToolCallbackProvider {
+public class DynamicToolRegistry implements ToolCallbackProvider{
 
     private final ToolProperties toolProperties;
     private final ToolStrategyFactory strategyFactory;
@@ -33,7 +36,7 @@ public class DynamicToolRegistry implements ToolCallbackProvider {
     public ToolCallback[] getToolCallbacks() {
         List<ToolCallback> callbacks = new ArrayList<>();
 
-        for (ToolProperties.ToolDefinition toolDef : toolProperties.getTools()) {
+        for (ToolDefinition toolDef : toolProperties.getTools()) {
             try {
                 // 使用 Spring AI 1.1.2 新 API：FunctionToolCallback
                 ToolCallback callback = FunctionToolCallback.builder(toolDef.getName(),
@@ -41,9 +44,16 @@ public class DynamicToolRegistry implements ToolCallbackProvider {
                         (Map<String, Object> inputArgs) -> {
                             try {
                                 return strategyFactory.execute(toolDef, inputArgs);
+                            } catch (SecurityException e) {
+                                // 鉴权异常
+                                return Response.error("AUTH_403", "无权限: " + e.getMessage());
+                            } catch (IllegalArgumentException e) {
+                                // 参数异常
+                                return Response.error("CLIENT_ERROR", "参数错误: " + e.getMessage());
                             } catch (Exception e) {
-                                // 返回错误信息格式，供 LLM 解析
-                                return new Response(true, e.getMessage(), toolDef.getName());
+                                // 其他异常
+                                log.error("工具执行异常: {}", toolDef.getName(), e);
+                                return Response.error("SYSTEM_ERROR", "系统错误: " + e.getMessage());
                             }
                         })
                         .description(toolDef.getDescription())

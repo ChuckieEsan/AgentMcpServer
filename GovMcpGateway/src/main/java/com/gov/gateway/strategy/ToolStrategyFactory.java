@@ -5,7 +5,7 @@ import com.gov.gateway.component.ParamAssemblyEngine;
 import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.model.AuthContext;
 import com.gov.gateway.core.model.ToolType;
-import com.gov.gateway.core.model.UserType;
+import com.gov.gateway.core.model.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -37,7 +37,7 @@ public class ToolStrategyFactory {
      * @param args    参数（Agent 传入的业务参数）
      * @return 执行结果
      */
-    public Object execute(ToolProperties.ToolDefinition toolDef, Map<String, Object> args) {
+    public Object execute(ToolDefinition toolDef, Map<String, Object> args) {
         // 1. 获取 AuthContext
         AuthContext authCtx = AuthInterceptor.getCurrentContext();
         log.debug("执行工具: {}, AuthContext: {}", toolDef.getName(), authCtx);
@@ -64,7 +64,7 @@ public class ToolStrategyFactory {
     /**
      * 鉴权检查：检查用户是否有权限调用此工具
      */
-    private void checkAuthorization(ToolProperties.ToolDefinition toolDef, AuthContext authCtx) {
+    private void checkAuthorization(ToolDefinition toolDef, AuthContext authCtx) {
         // 检查 authRoles
         List<String> authRoles = toolDef.getAuthRoles();
         if (authRoles != null && !authRoles.isEmpty()) {

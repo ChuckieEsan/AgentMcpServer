@@ -21,6 +21,11 @@ spring:
         enabled: true
         sse-endpoint: /sse
         sse-message-endpoint: /mcp/message
+        type: sync
+        protocol: sse
+        capabilities:
+          tool: true
+
 
   # Dubbo 配置
 # 注意：

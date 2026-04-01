@@ -2,6 +2,7 @@ package com.gov.gateway;
 
 import com.gov.gateway.component.DynamicToolRegistry;
 import com.gov.gateway.config.ToolProperties;
+import com.gov.gateway.core.model.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -73,7 +74,7 @@ class McpHealthCheckTest {
     void testToolConfigCompleteness() {
         System.out.println("========== 工具配置完整性检查 ==========");
 
-        for (ToolProperties.ToolDefinition tool : toolProperties.getTools()) {
+        for (ToolDefinition tool : toolProperties.getTools()) {
             System.out.println("检查工具: " + tool.getName());
 
             assertNotNull(tool.getName(), "工具名称不应为空");

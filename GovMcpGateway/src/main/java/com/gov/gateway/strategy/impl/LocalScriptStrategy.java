@@ -2,6 +2,7 @@ package com.gov.gateway.strategy.impl;
 
 import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.exception.ToolExecutionException;
+import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.core.model.ToolType;
 import com.gov.gateway.strategy.ToolStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +16,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -33,7 +33,7 @@ public class LocalScriptStrategy implements ToolStrategy {
     }
 
     @Override
-    public Object execute(ToolProperties.ToolDefinition toolDef, Map<String, Object> args) {
+    public Object execute(ToolDefinition toolDef, Map<String, Object> args) {
         Map<String, Object> meta = toolDef.getMetadata();
         String command = (String) meta.get("command");
         String scriptPath = (String) meta.get("scriptPath");

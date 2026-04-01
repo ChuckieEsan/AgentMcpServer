@@ -3,6 +3,7 @@ package com.gov.gateway;
 import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.model.AuthContext;
 import com.gov.gateway.core.model.AuthLevel;
+import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.core.model.UserType;
 import com.gov.gateway.strategy.ToolStrategyFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,8 +29,8 @@ class ParamAssemblyIntegrationTest {
     @Autowired
     private ToolStrategyFactory factory;
 
-    private ToolProperties.ToolDefinition createTool;
-    private ToolProperties.ToolDefinition queryTool;
+    private ToolDefinition createTool;
+    private ToolDefinition queryTool;
 
     @BeforeEach
     void setUp() {

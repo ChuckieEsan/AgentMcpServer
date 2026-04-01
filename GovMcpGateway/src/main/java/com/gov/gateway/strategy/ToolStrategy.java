@@ -1,6 +1,6 @@
 package com.gov.gateway.strategy;
 
-import com.gov.gateway.config.ToolProperties;
+import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.core.model.ToolType;
 
 import java.util.Map;
@@ -25,5 +25,5 @@ public interface ToolStrategy {
      * @param arguments      执行参数
      * @return 执行结果
      */
-    Object execute(ToolProperties.ToolDefinition toolDefinition, Map<String, Object> arguments);
+    Object execute(ToolDefinition toolDefinition, Map<String, Object> arguments);
 }
