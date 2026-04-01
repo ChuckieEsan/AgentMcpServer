@@ -1,6 +1,7 @@
 package com.gov.gateway.strategy.impl;
 
-import com.gov.gateway.core.exception.ToolExecutionException;
+import com.gov.gateway.core.enums.ToolErrorType;
+import com.gov.gateway.core.exception.ToolException;
 import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.core.enums.ToolType;
 import com.gov.gateway.strategy.ToolStrategy;
@@ -41,7 +42,7 @@ public class LocalScriptStrategy implements ToolStrategy {
 
         // Security 1: 路径穿越检查
         if (scriptPath != null && scriptPath.contains("..")) {
-            throw new ToolExecutionException("Illegal script path detected!", toolDef.getName());
+            throw new ToolException("非法路径: 检测到路径穿越", ToolErrorType.CLIENT_ERROR, toolDef.getName());
         }
 
         try {
@@ -73,8 +74,9 @@ public class LocalScriptStrategy implements ToolStrategy {
             boolean finished = process.waitFor(timeout, TimeUnit.MILLISECONDS);
             if (!finished) {
                 process.destroyForcibly();
-                throw new ToolExecutionException(
-                        "Script execution timed out after " + timeout + "ms",
+                throw new ToolException(
+                        "脚本执行超时: " + timeout + "ms",
+                        ToolErrorType.TRANSIENT_ERROR,
                         toolDef.getName());
             }
 
@@ -98,12 +100,13 @@ public class LocalScriptStrategy implements ToolStrategy {
                 return output;
             }
 
-        } catch (ToolExecutionException e) {
+        } catch (ToolException e) {
             throw e;
         } catch (Exception e) {
             log.error("Local script execution failed for tool: {}", toolDef.getName(), e);
-            throw new ToolExecutionException(
-                    "Script execution failed: " + e.getMessage(),
+            throw new ToolException(
+                    "脚本执行失败: " + e.getMessage(),
+                    ToolErrorType.SYSTEM_ERROR,
                     e,
                     toolDef.getName());
         }

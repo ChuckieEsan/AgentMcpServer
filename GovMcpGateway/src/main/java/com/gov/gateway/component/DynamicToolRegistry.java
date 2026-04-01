@@ -2,8 +2,9 @@ package com.gov.gateway.component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gov.gateway.config.ToolProperties;
-import com.gov.gateway.core.dto.Response;
+import com.gov.gateway.core.exception.ToolException;
 import com.gov.gateway.core.model.ToolDefinition;
+import com.gov.gateway.exception.ExceptionHandlerChain;
 import com.gov.gateway.strategy.ToolStrategyFactory;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ public class DynamicToolRegistry implements ToolCallbackProvider{
     private final ToolProperties toolProperties;
     private final ToolStrategyFactory strategyFactory;
     private final ObjectMapper objectMapper;
+    private final ExceptionHandlerChain exceptionHandlerChain;
 
     /**
      * Spring AI 1.1.2 核心回调注册入口
@@ -46,15 +49,22 @@ public class DynamicToolRegistry implements ToolCallbackProvider{
                             try {
                                 return createMcpResponse(strategyFactory.execute(toolDef, inputArgs), "SUCCESS", false);
                             } catch (SecurityException e) {
-                                // 鉴权异常
-                                return createMcpResponse(e.getMessage(), "SYSTEM_ERROR", true);
+                                // 鉴权异常 - 转为 SYSTEM_ERROR
+                                ToolException te = exceptionHandlerChain.handle(e);
+                                return createErrorResponse(te);
                             } catch (IllegalArgumentException e) {
-                                // 参数异常
-                                return createMcpResponse(e.getMessage(), "CLIENT_ERROR", true);
+                                // 参数异常 - 转为 CLIENT_ERROR
+                                ToolException te = exceptionHandlerChain.handle(e);
+                                return createErrorResponse(te);
+                            } catch (ToolException e) {
+                                // 已经是 ToolException，使用责任链处理
+                                ToolException handled = exceptionHandlerChain.handle(e);
+                                return createErrorResponse(handled);
                             } catch (Exception e) {
                                 // 其他异常
                                 log.error("工具执行异常: {}", toolDef.getName(), e);
-                                return createMcpResponse(e.getMessage(), "SYSTEM_ERROR", true);
+                                ToolException te = exceptionHandlerChain.handle(e);
+                                return createErrorResponse(te);
                             }
                         })
                         .description(toolDef.getDescription())
@@ -76,6 +86,25 @@ public class DynamicToolRegistry implements ToolCallbackProvider{
         return McpSchema.CallToolResult.builder()
                 .addTextContent(message)
                 .structuredContent(data)
+                .isError(isError)
+                .build();
+    }
+
+    /**
+     * 创建错误响应，包含错误类型和可重试性信息
+     */
+    private McpSchema.CallToolResult createErrorResponse(ToolException te) {
+        Map<String, Object> errorData = new HashMap<>();
+        errorData.put("success", false);
+        errorData.put("errorType", te.getErrorType().name());
+        errorData.put("retryable", te.isRetryable());
+        errorData.put("message", te.getMessage());
+
+        String errorTypeName = te.getErrorType().name();
+        return McpSchema.CallToolResult.builder()
+                .addTextContent(errorTypeName + ": " + te.getMessage())
+                .structuredContent(errorData)
+                .isError(true)
                 .build();
     }
 }

@@ -73,61 +73,50 @@ AgentMcpServer/
 
 ### 3.2 异常处理规范
 
-**三层错误码体系**:
-| 前缀 | 说明 | 示例 |
-|-----|------|------|
-| RPC_ | JSON-RPC 协议层错误 | RPC_32600, RPC_32601 |
-| SYS_ | 系统层错误（超时、限流、故障） | SYS_5001, SYS_5002, SYS_5003 |
-| BIZ_ | 业务层错误（校验、不存在、状态冲突） | BIZ_4001, BIZ_4004, BIZ_4009 |
-
-**可恢复性**:
-- `RECOVERABLE`: 可重试（临时故障，如超时、限流）
-- `NON_RECOVERABLE`: 不可重试（业务错误、严重故障）
+**四象限错误分类**:
+| 错误类型 | 可重试 | 说明 |
+|---------|-------|------|
+| TRANSIENT_ERROR | ✅ 是 | 临时性故障，如网络抖动、服务暂时不可用、超时 |
+| BUSINESS_ERROR | ❌ 否 | 业务逻辑错误，如工单不存在、状态不对、权限不足 |
+| CLIENT_ERROR | ❌ 否 | 客户端错误，如参数缺失、参数类型错误、方法不存在 |
+| SYSTEM_ERROR | ❌ 否 | 系统级错误，如配置错误、代码bug、未知异常 |
 
 **异常类**:
 ```java
-// 业务异常 - 用于业务逻辑错误
-public class BusinessException extends RuntimeException {
-    private final GovErrorCode errorCode;
-    private final String messageForLLM;  // 专门给 LLM 看的提示语
-    private final String traceId;
-}
-
-// 系统异常 - 用于系统级错误
-public class SystemException extends RuntimeException {
-    private final GovErrorCode errorCode;
-    private final String messageForLLM;
-    private final String traceId;
+// 工具执行异常 - 当前简单实现
+public class ToolExecutionException extends RuntimeException {
+    private final String toolName;
+    private final boolean error;
 }
 ```
 
 ### 3.3 响应规范
 
-使用 `McpToolResponse` 统一响应格式：
+使用 Spring AI 的 `CallToolResult` 统一响应格式：
 ```java
-// 成功响应
-McpToolResponse.success()
-
-// 错误响应
-McpToolResponse.error(new BusinessException(GovErrorCode.BIZ_NOT_FOUND, "工单不存在"))
-McpToolResponse.error(new SystemException(GovErrorCode.SYS_TIMEOUT, "服务超时"))
+McpSchema.CallToolResult.builder()
+    .addTextContent(message)
+    .structuredContent(data)
+    .isError(isError)
+    .build();
 ```
 
-响应 JSON 结构：
+响应 JSON 结构（通过 structuredContent 返回）：
 ```json
+// 成功时
+{
+  "success": true,
+  "data": { ... }
+}
+
+// 失败时（当前简单实现）
 {
   "success": false,
-  "errorCode": "BIZ_4004",
-  "recoverable": "NON_RECOVERABLE",
-  "message": "工单ID不存在",
-  "messageForLLM": "未查询到您提供的工单号，请向市民确认工单号是否为 GD_ 开头。",
-  "traceId": "gw-1234567890"
+  "errorType": "CLIENT_ERROR",
+  "retryable": false,
+  "message": "参数缺失: orderId"
 }
 ```
-
-**关键约定**：
-- `message`: 真实的开发堆栈/原始报错，仅用于日志记录，**不暴露给大模型**
-- `messageForLLM`: **专门写给大模型看的 Prompt 指导语**，让 LLM 能够"读懂错误并自然表达"
 
 ### 3.4 策略模式
 
@@ -225,17 +214,32 @@ class DubboGenericStrategyTest {
 
 ## 6. 关键文件参考
 
-### 异常和错误码
-- `GovMcpGateway/src/main/java/com/gov/gateway/core/enums/GovErrorCode.java`
-- `GovMcpGateway/src/main/java/com/gov/gateway/core/exception/BusinessException.java`
-- `GovMcpGateway/src/main/java/com/gov/gateway/core/exception/SystemException.java`
+### 异常处理
+- `GovMcpGateway/src/main/java/com/gov/gateway/core/exception/ToolException.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/core/enums/ToolErrorType.java`
 
-### 响应封装
-- `GovMcpGateway/src/main/java/com/gov/gateway/core/dto/McpToolResponse.java`
+### 异常责任链
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/ExceptionHandlerChain.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/ExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/AbstractExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/ClientExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/BusinessExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/TransientExceptionHandler.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/exception/handler/SystemExceptionHandler.java`
+
+### 枚举
+- `GovMcpGateway/src/main/java/com/gov/gateway/core/enums/ToolType.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/core/enums/UserType.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/core/enums/AuthLevel.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/core/enums/ParamSource.java`
 
 ### 策略实现
 - `GovMcpGateway/src/main/java/com/gov/gateway/strategy/impl/DubboGenericStrategy.java`
 - `GovMcpGateway/src/main/java/com/gov/gateway/strategy/impl/LocalScriptStrategy.java`
+
+### 核心组件
+- `GovMcpGateway/src/main/java/com/gov/gateway/component/DynamicToolRegistry.java`
+- `GovMcpGateway/src/main/java/com/gov/gateway/strategy/ToolStrategyFactory.java`
 
 ---
 

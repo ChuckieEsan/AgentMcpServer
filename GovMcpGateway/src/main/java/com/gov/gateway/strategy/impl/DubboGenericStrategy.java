@@ -1,5 +1,7 @@
 package com.gov.gateway.strategy.impl;
 
+import com.gov.gateway.core.enums.ToolErrorType;
+import com.gov.gateway.core.exception.ToolException;
 import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.core.enums.ToolType;
 import com.gov.gateway.strategy.ToolStrategy;
@@ -83,7 +85,8 @@ public class DubboGenericStrategy implements ToolStrategy {
 
         } catch (GenericException e) {
             log.error("Dubbo generic invoke failed", e);
-            throw new RuntimeException("Remote service error: " + e.getExceptionMessage());
+            // 抛出 ToolException，后续由责任链处理分类
+            throw new ToolException("Dubbo调用失败: " + e.getExceptionMessage(), ToolErrorType.SYSTEM_ERROR, e);
         }
     }
 
