@@ -1,17 +1,17 @@
 package com.gov.gateway.component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gov.gateway.config.ToolProperties;
 import com.gov.gateway.core.dto.Response;
 import com.gov.gateway.core.model.ToolDefinition;
 import com.gov.gateway.strategy.ToolStrategyFactory;
+import io.modelcontextprotocol.spec.McpSchema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +28,7 @@ public class DynamicToolRegistry implements ToolCallbackProvider{
 
     private final ToolProperties toolProperties;
     private final ToolStrategyFactory strategyFactory;
+    private final ObjectMapper objectMapper;
 
     /**
      * Spring AI 1.1.2 核心回调注册入口
@@ -43,17 +44,17 @@ public class DynamicToolRegistry implements ToolCallbackProvider{
                         // 使用 Lambda 表达式作为实际被调用的 Function
                         (Map<String, Object> inputArgs) -> {
                             try {
-                                return strategyFactory.execute(toolDef, inputArgs);
+                                return createMcpResponse(strategyFactory.execute(toolDef, inputArgs), "SUCCESS", false);
                             } catch (SecurityException e) {
                                 // 鉴权异常
-                                return Response.error("AUTH_403", "无权限: " + e.getMessage());
+                                return createMcpResponse(e.getMessage(), "SYSTEM_ERROR", true);
                             } catch (IllegalArgumentException e) {
                                 // 参数异常
-                                return Response.error("CLIENT_ERROR", "参数错误: " + e.getMessage());
+                                return createMcpResponse(e.getMessage(), "CLIENT_ERROR", true);
                             } catch (Exception e) {
                                 // 其他异常
                                 log.error("工具执行异常: {}", toolDef.getName(), e);
-                                return Response.error("SYSTEM_ERROR", "系统错误: " + e.getMessage());
+                                return createMcpResponse(e.getMessage(), "SYSTEM_ERROR", true);
                             }
                         })
                         .description(toolDef.getDescription())
@@ -69,5 +70,12 @@ public class DynamicToolRegistry implements ToolCallbackProvider{
         }
 
         return callbacks.toArray(new ToolCallback[0]);
+    }
+
+    private McpSchema.CallToolResult createMcpResponse(Object data, String message, boolean isError) {
+        return McpSchema.CallToolResult.builder()
+                .addTextContent(message)
+                .structuredContent(data)
+                .build();
     }
 }
