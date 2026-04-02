@@ -17,18 +17,21 @@ public class DubboRpcExceptionHandler implements ToolExceptionHandler {
     @Override
     public ToolError handle(Throwable e, Object result) {
         if (e instanceof RpcException rpcException) {
+            // 业务异常 - Dubbo 会自动将业务异常转换为 RpcException(code=3)
+            if (rpcException.isBiz()) {
+                return ToolError.businessError("业务处理失败: " + rpcException.getMessage());
+            }
+
             // 超时或网络问题 - 可重试
             if (rpcException.isTimeout() || rpcException.isNetwork()) {
                 return ToolError.transientError("服务响应超时，请稍后重试");
             }
-            // 限流 - 可重试
-            String message = rpcException.getMessage();
-            if (message != null && (message.toLowerCase().contains("limit") ||
-                    message.contains("限流") || message.contains("rate limit"))) {
-                return ToolError.transientError("服务限流中，请稍后重试");
+            // 限流 - 不可重试
+            if (rpcException.isLimitExceed()) {
+                return ToolError.systemError("服务限流中，目前不可用");
             }
-            // 无提供者 - 系统错误，不可重试
-            if (rpcException.isNoInvokerAvailableAfterFilter()) {
+            // 序列化失败，无提供者 - 系统错误，不可重试
+            if (rpcException.isSerialization() || rpcException.isNoInvokerAvailableAfterFilter()) {
                 return ToolError.systemError("服务提供者不可用，请联系管理员");
             }
         }

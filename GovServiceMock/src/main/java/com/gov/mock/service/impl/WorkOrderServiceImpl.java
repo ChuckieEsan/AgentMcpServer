@@ -1,10 +1,9 @@
 package com.gov.mock.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gov.mock.dto.Response;
-import com.gov.mock.enums.ErrorCode;
 import com.gov.mock.enums.WorkOrderAction;
 import com.gov.mock.enums.WorkOrderStatus;
+import com.gov.mock.exception.BusinessException;
 import com.gov.mock.model.PoliticalElements;
 import com.gov.mock.model.UserFeedback;
 import com.gov.mock.model.WorkOrder;
@@ -81,47 +80,42 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     }
 
     @Override
-    public Response createWorkOrder(Map<String, Object> orderData) {
-        try {
-            WorkOrder dto = objectMapper.convertValue(orderData, WorkOrder.class);
+    public WorkOrder createWorkOrder(Map<String, Object> orderData) {
+        WorkOrder dto = objectMapper.convertValue(orderData, WorkOrder.class);
 
-            // 必填校验
-            if (dto.getUserId() == null || dto.getUserId().isBlank()) {
-                return Response.error(ErrorCode.BIZ_MISSING_REQUIRED, "缺少必填字段: userId");
-            }
-            if (dto.getUserPhone() == null || dto.getUserPhone().isBlank()) {
-                return Response.error(ErrorCode.BIZ_MISSING_REQUIRED, "缺少必填字段: userPhone");
-            }
-            if (dto.getTitle() == null || dto.getTitle().isBlank()) {
-                return Response.error(ErrorCode.BIZ_MISSING_REQUIRED, "缺少必填字段: title");
-            }
-
-            dto.setId("GD_" + System.currentTimeMillis());
-            dto.setStatus(WorkOrderStatus.UNASSIGNED);
-            dto.setCreateTime(LocalDateTime.now().toString());
-            DB.put(dto.getId(), dto);
-            System.out.println(">>> [Created] ID: " + dto.getId() + ", Title: " + dto.getTitle());
-            return Response.ok(Map.of("orderId", dto.getId()));
-        } catch (Exception e) {
-            System.err.println("创建工单失败: " + e.getMessage());
-            return Response.error(ErrorCode.BIZ_VALIDATION_FAILED, "参数错误: " + e.getMessage());
+        // 必填校验
+        if (dto.getUserId() == null || dto.getUserId().isBlank()) {
+            throw new BusinessException("缺少必填字段: userId");
         }
+        if (dto.getUserPhone() == null || dto.getUserPhone().isBlank()) {
+            throw new BusinessException("缺少必填字段: userPhone");
+        }
+        if (dto.getTitle() == null || dto.getTitle().isBlank()) {
+            throw new BusinessException("缺少必填字段: title");
+        }
+
+        dto.setId("GD_" + System.currentTimeMillis());
+        dto.setStatus(WorkOrderStatus.UNASSIGNED);
+        dto.setCreateTime(LocalDateTime.now().toString());
+        DB.put(dto.getId(), dto);
+        System.out.println(">>> [Created] ID: " + dto.getId() + ", Title: " + dto.getTitle());
+        return dto;
     }
 
     @Override
-    public Response queryWorkOrder(String orderId) {
+    public WorkOrder queryWorkOrder(String orderId) {
         WorkOrder dto = DB.get(orderId);
         if (dto == null) {
-            return Response.error(ErrorCode.BIZ_NOT_FOUND, "工单不存在: " + orderId);
+            throw new BusinessException("工单不存在: " + orderId);
         }
-        return Response.ok(dto);
+        return dto;
     }
 
     @Override
-    public Response processWorkOrder(String orderId, WorkOrderAction action, Map<String, Object> payload) {
+    public WorkOrder processWorkOrder(String orderId, WorkOrderAction action, Map<String, Object> payload) {
         WorkOrder dto = DB.get(orderId);
         if (dto == null) {
-            return Response.error(ErrorCode.BIZ_NOT_FOUND, "工单不存在: " + orderId);
+            throw new BusinessException("工单不存在: " + orderId);
         }
 
         WorkOrderStatus current = dto.getStatus();
@@ -129,7 +123,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         // 状态机控制
         if (action == WorkOrderAction.ASSIGN) {
             if (current != WorkOrderStatus.UNASSIGNED) {
-                return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+                throw new BusinessException(
                         String.format("当前状态 [%s] 不允许执行 [ASSIGN]，只有 [UNASSIGNED] 状态才能分拨", current));
             }
             dto.setStatus(WorkOrderStatus.ASSIGNED);
@@ -138,49 +132,43 @@ public class WorkOrderServiceImpl implements WorkOrderService {
             System.out.println(">>> [ASSIGN] 工单 " + orderId + " 已分拨至部门: " + dto.getDepartment());
         } else if (action == WorkOrderAction.ACCEPT) {
             if (current != WorkOrderStatus.ASSIGNED) {
-                return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+                throw new BusinessException(
                         String.format("当前状态 [%s] 不允许执行 [ACCEPT]，只有 [ASSIGNED] 状态才能受理", current));
             }
             dto.setStatus(WorkOrderStatus.ACCEPTED);
             System.out.println(">>> [ACCEPT] 工单 " + orderId + " 已被受理");
         } else if (action == WorkOrderAction.REPLY) {
             if (current != WorkOrderStatus.ACCEPTED) {
-                return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+                throw new BusinessException(
                         String.format("当前状态 [%s] 不允许执行 [REPLY]，只有 [ACCEPTED] 状态才能回复", current));
             }
             dto.setStatus(WorkOrderStatus.REPLIED);
             dto.setReplyContent((String) payload.get("replyContent"));
             System.out.println(">>> [REPLY] 工单 " + orderId + " 已回复");
         } else {
-            return Response.error(ErrorCode.BIZ_PROCESS_FAILED, "未知动作: " + action);
+            throw new BusinessException("未知动作: " + action);
         }
 
         dto.setUpdateTime(LocalDateTime.now().toString());
-        return Response.ok(Map.of("currentStatus", dto.getStatus()));
+        return dto;
     }
 
     @Override
-    public Response submitFeedback(String orderId, Map<String, Object> feedbackData) {
+    public void submitFeedback(String orderId, Map<String, Object> feedbackData) {
         WorkOrder dto = DB.get(orderId);
         if (dto == null) {
-            return Response.error(ErrorCode.BIZ_NOT_FOUND, "工单不存在: " + orderId);
+            throw new BusinessException("工单不存在: " + orderId);
         }
 
         if (dto.getStatus() != WorkOrderStatus.REPLIED) {
-            return Response.error(ErrorCode.BIZ_STATUS_CONFLICT,
+            throw new BusinessException(
                     String.format("当前状态 [%s] 不允许提交评价，只有 [REPLIED] 状态才能评价", dto.getStatus()));
         }
 
-        try {
-            UserFeedback feedback = objectMapper.convertValue(feedbackData, UserFeedback.class);
-            dto.setUserFeedback(feedback);
-            dto.setStatus(WorkOrderStatus.RATED);
-            dto.setUpdateTime(LocalDateTime.now().toString());
-            System.out.println(">>> [FEEDBACK] 工单 " + orderId + " 评价已提交");
-            return Response.ok();
-        } catch (Exception e) {
-            System.err.println("提交评价失败: " + e.getMessage());
-            return Response.error(ErrorCode.BIZ_VALIDATION_FAILED, "评价数据格式错误: " + e.getMessage());
-        }
+        UserFeedback feedback = objectMapper.convertValue(feedbackData, UserFeedback.class);
+        dto.setUserFeedback(feedback);
+        dto.setStatus(WorkOrderStatus.RATED);
+        dto.setUpdateTime(LocalDateTime.now().toString());
+        System.out.println(">>> [FEEDBACK] 工单 " + orderId + " 评价已提交");
     }
 }

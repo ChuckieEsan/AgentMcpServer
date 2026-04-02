@@ -12,8 +12,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.net.SocketException;
-import java.util.concurrent.TimeoutException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -60,13 +60,13 @@ class ExceptionHandlerChainTest {
         }
 
         @Test
-        @DisplayName("Dubbo 限流异常应归类为 TRANSIENT_ERROR")
-        void dubboLimitExceed_shouldBeTransient() {
+        @DisplayName("Dubbo 限流异常应归类为 SYSTEM_ERROR")
+        void dubboLimitExceed_shouldBeSystemError() {
             RpcException e = new RpcException("Rate limit exceeded");
             ToolError result = chain.process(e, null);
 
-            assertEquals("TRANSIENT_ERROR", result.getErrorCategory());
-            assertTrue(result.isRetryable());
+            assertEquals("SYSTEM_ERROR", result.getErrorCategory());
+            assertFalse(result.isRetryable());
         }
 
         @Test
@@ -96,17 +96,6 @@ class ExceptionHandlerChainTest {
         }
 
         @Test
-        @DisplayName("GenericException 里面有业务关键字应归类为 BUSINESS_ERROR")
-        void genericBusiness_shouldBeBusinessError() {
-            org.apache.dubbo.rpc.service.GenericException e =
-                new org.apache.dubbo.rpc.service.GenericException("com.gov.mock.exception.BizException", "Order not found");
-            ToolError result = chain.process(e, null);
-
-            assertEquals("BUSINESS_ERROR", result.getErrorCategory());
-            assertFalse(result.isRetryable());
-        }
-
-        @Test
         @DisplayName("GenericException 里面有 NPE 应归类为 SYSTEM_ERROR")
         void genericNPE_shouldBeSystemError() {
             org.apache.dubbo.rpc.service.GenericException e =
@@ -123,38 +112,38 @@ class ExceptionHandlerChainTest {
     class BusinessErrorTests {
 
         @Test
-        @DisplayName("包含'不存在'关键字应归类为 BUSINESS_ERROR")
-        void notFound_shouldBeBusinessError() {
-            RuntimeException e = new RuntimeException("Order not found");
-            ToolError result = chain.process(e, null);
+        @DisplayName("result.success=false 应归类为 BUSINESS_ERROR")
+        void resultSuccessFalse_shouldBeBusinessError() {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "工单不存在");
 
-            assertEquals("BUSINESS_ERROR", result.getErrorCategory());
-            assertFalse(result.isRetryable());
+            ToolError error = chain.process(null, result);
+
+            assertEquals("BUSINESS_ERROR", error.getErrorCategory());
+            assertEquals("工单不存在", error.getMessage());
+            assertFalse(error.isRetryable());
         }
 
         @Test
-        @DisplayName("包含'实名等级'关键字应归类为 BUSINESS_ERROR")
-        void authLevel_shouldBeBusinessError() {
-            RuntimeException e = new RuntimeException("Auth level insufficient, require L3");
-            ToolError result = chain.process(e, null);
+        @DisplayName("result.success=true 不应归类为 BUSINESS_ERROR")
+        void resultSuccessTrue_shouldNotBeBusinessError() {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("data", "some data");
 
-            assertEquals("BUSINESS_ERROR", result.getErrorCategory());
-            assertFalse(result.isRetryable());
+            ToolError error = chain.process(null, result);
+
+            // 应该继续传递到 SystemExceptionHandler
+            assertEquals("SYSTEM_ERROR", error.getErrorCategory());
         }
-    }
-
-    @Nested
-    @DisplayName("SystemExceptionHandler - 系统错误（兜底）")
-    class SystemErrorTests {
 
         @Test
-        @DisplayName("未知异常应归类为 SYSTEM_ERROR")
-        void unknownException_shouldBeSystemError() {
-            NullPointerException e = new NullPointerException("Something is null");
-            ToolError result = chain.process(e, null);
+        @DisplayName("result 为 null 不应归类为 BUSINESS_ERROR")
+        void resultNull_shouldNotBeBusinessError() {
+            ToolError error = chain.process(new RuntimeException("some error"), null);
 
-            assertEquals("SYSTEM_ERROR", result.getErrorCategory());
-            assertFalse(result.isRetryable());
+            assertEquals("SYSTEM_ERROR", error.getErrorCategory());
         }
     }
 
@@ -174,16 +163,20 @@ class ExceptionHandlerChainTest {
         @Test
         @DisplayName("BUSINESS_ERROR 的 retryable 应为 false")
         void business_shouldNotBeRetryable() {
-            RuntimeException e = new RuntimeException("Order not found");
-            ToolError result = chain.process(e, null);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "工单不存在");
 
-            assertFalse(result.isRetryable());
+            ToolError error = chain.process(null, result);
+
+            assertFalse(error.isRetryable());
         }
 
         @Test
         @DisplayName("CLIENT_ERROR 的 retryable 应为 false")
         void client_shouldNotBeRetryable() {
-            IllegalArgumentException e = new IllegalArgumentException("Invalid");
+            org.apache.dubbo.rpc.service.GenericException e =
+                new org.apache.dubbo.rpc.service.GenericException("java.lang.IllegalArgumentException", "Invalid");
             ToolError result = chain.process(e, null);
 
             assertFalse(result.isRetryable());

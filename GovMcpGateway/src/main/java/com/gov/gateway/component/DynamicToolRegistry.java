@@ -70,7 +70,7 @@ public class DynamicToolRegistry implements ToolCallbackProvider {
 
     private McpSchema.CallToolResult createSuccessResponse(Object data) {
         return McpSchema.CallToolResult.builder()
-                .addTextContent("SUCCESS")
+                .addTextContent("success")
                 .structuredContent(data)
                 .isError(false)
                 .build();

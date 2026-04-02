@@ -5,35 +5,28 @@ import com.gov.gateway.exception.ToolExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 /**
- * 处理业务错误（直接的业务异常，不通过 GenericException 包装）
+ * 处理业务错误
+ * 通过 result.success 判断业务是否成功
  */
 @Component
 @Order(3)
 public class BusinessExceptionHandler implements ToolExceptionHandler {
 
-    private static final String[] BUSINESS_KEYWORDS = {
-        "not found",
-        "不存在",
-        "未找到",
-        "状态",
-        "不可操作",
-        "无权限",
-        "实名等级",
-        "auth level",
-        "已存在",
-        "already exists"
-    };
-
     @Override
     public ToolError handle(Throwable e, Object result) {
-        String message = e.getMessage();
-        if (message != null) {
-            String lowerMsg = message.toLowerCase();
-            for (String keyword : BUSINESS_KEYWORDS) {
-                if (lowerMsg.contains(keyword.toLowerCase())) {
-                    return ToolError.businessError("业务错误: " + message);
-                }
+        // 通过 result 判断业务是否成功
+        if (result instanceof Map) {
+            Map<?, ?> resultMap = (Map<?, ?>) result;
+            Object success = resultMap.get("success");
+
+            // 如果业务返回 success=false，说明业务处理失败
+            if (Boolean.FALSE.equals(success)) {
+                Object message = resultMap.get("message");
+                String errorMsg = message != null ? message.toString() : "业务处理失败";
+                return ToolError.businessError(errorMsg);
             }
         }
         return null;
